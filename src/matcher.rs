@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
 
+use defer_drop::DeferDrop;
 use once_cell::sync::Lazy;
 use rayon::prelude::*;
 use rayon::ThreadPool;
@@ -78,7 +79,7 @@ impl Matcher {
         &self,
         query: &str,
         disabled: bool,
-        item_pool: Arc<ItemPool>,
+        item_pool: Arc<DeferDrop<ItemPool>>,
         callback: Box<dyn Fn(Arc<SpinLock<Vec<MatchedItem>>>) + Send>,
     ) -> MatcherControl {
         let matcher_engine = self.engine_factory.create_engine_with_case(query, self.case_matching);
