@@ -122,7 +122,7 @@ impl Model {
         let rank_builder = Arc::new(RankBuilder::new(criterion));
 
         let selection = Selection::with_options(options).theme(theme.clone());
-        let regex_engine: Rc<dyn MatchEngineFactory> =
+        let regex_engine: Rc<dyn for<'d> MatchEngineFactory<'d>> =
             Rc::new(RegexEngineFactory::builder().rank_builder(rank_builder.clone()).build());
         let regex_matcher = Matcher::builder(regex_engine).build();
 
@@ -130,7 +130,7 @@ impl Model {
             // use provided engine
             Matcher::builder(engine_factory.clone()).case(options.case).build()
         } else {
-            let fuzzy_engine_factory: Rc<dyn MatchEngineFactory> = Rc::new(AndOrEngineFactory::new(Box::new(
+            let fuzzy_engine_factory: Rc<dyn for<'d> MatchEngineFactory<'d>> = Rc::new(AndOrEngineFactory::new(Box::new(
                 ExactOrFuzzyEngineFactory::builder()
                     .exact_mode(options.exact)
                     .rank_builder(rank_builder.clone())

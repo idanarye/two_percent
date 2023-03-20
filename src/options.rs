@@ -47,7 +47,7 @@ pub struct SkimOptions<'a> {
     pub layout: &'a str,
     pub algorithm: FuzzyAlgorithm,
     pub case: CaseMatching,
-    pub engine_factory: Option<Rc<dyn MatchEngineFactory>>,
+    pub engine_factory: Option<Rc<dyn for<'d> MatchEngineFactory<'d>>>,
     pub query_history: &'a [String],
     pub cmd_history: &'a [String],
     pub cmd_collector: Rc<RefCell<dyn CommandCollector>>,

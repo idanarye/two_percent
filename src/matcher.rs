@@ -53,12 +53,12 @@ impl MatcherControl {
 
 //==============================================================================
 pub struct Matcher {
-    engine_factory: Rc<dyn MatchEngineFactory>,
+    engine_factory: Rc<dyn for<'d> MatchEngineFactory<'d>>,
     case_matching: CaseMatching,
 }
 
 impl Matcher {
-    pub fn builder(engine_factory: Rc<dyn MatchEngineFactory>) -> Self {
+    pub fn builder(engine_factory: Rc<dyn for<'d> MatchEngineFactory<'d>>) -> Self {
         Self {
             engine_factory,
             case_matching: CaseMatching::default(),

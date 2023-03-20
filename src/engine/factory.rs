@@ -49,7 +49,7 @@ impl ExactOrFuzzyEngineFactory {
     }
 }
 
-impl MatchEngineFactory for ExactOrFuzzyEngineFactory {
+impl MatchEngineFactory<'_> for ExactOrFuzzyEngineFactory {
     fn create_engine_with_case(&self, query: &str, case: CaseMatching) -> Box<dyn for<'b> MatchEngine<'b>> {
         // 'abc => match exact "abc"
         // ^abc => starts with "abc"
@@ -132,11 +132,11 @@ impl MatchEngineFactory for ExactOrFuzzyEngineFactory {
 
 //------------------------------------------------------------------------------
 pub struct AndOrEngineFactory {
-    inner: Box<dyn MatchEngineFactory>,
+    inner: Box<dyn for<'d> MatchEngineFactory<'d>>,
 }
 
 impl AndOrEngineFactory {
-    pub fn new(factory: Box<dyn MatchEngineFactory>) -> Self {
+    pub fn new(factory: Box<dyn for<'d> MatchEngineFactory<'d>>) -> Self {
         Self { inner: factory }
     }
 
@@ -190,7 +190,7 @@ impl AndOrEngineFactory {
     }
 }
 
-impl MatchEngineFactory for AndOrEngineFactory {
+impl MatchEngineFactory<'_> for AndOrEngineFactory {
     fn create_engine_with_case(&self, query: &str, case: CaseMatching) -> Box<dyn for<'b> MatchEngine<'b>> {
         self.parse_or(query, case)
     }
@@ -218,7 +218,7 @@ impl RegexEngineFactory {
     }
 }
 
-impl MatchEngineFactory for RegexEngineFactory {
+impl MatchEngineFactory<'_> for RegexEngineFactory {
     fn create_engine_with_case(&self, query: &str, case: CaseMatching) -> Box<dyn for<'b> MatchEngine<'b>> {
         Box::new(
             RegexEngine::builder(query, case)
