@@ -50,7 +50,7 @@ impl ExactOrFuzzyEngineFactory {
 }
 
 impl MatchEngineFactory for ExactOrFuzzyEngineFactory {
-    fn create_engine_with_case(&self, query: &str, case: CaseMatching) -> Box<dyn MatchEngine> {
+    fn create_engine_with_case(&self, query: &str, case: CaseMatching) -> Box<dyn for<'b> MatchEngine<'b>> {
         // 'abc => match exact "abc"
         // ^abc => starts with "abc"
         // abc$ => ends with "abc"
@@ -143,7 +143,7 @@ impl AndOrEngineFactory {
     // we want to treat `\ ` as plain white space
     // regex crate doesn't support look around, so I use a lazy workaround
     // that replace `\ ` with `\0` ahead of split and replace it back afterwards
-    fn parse_or(&self, query: &str, case: CaseMatching) -> Box<dyn MatchEngine> {
+    fn parse_or(&self, query: &str, case: CaseMatching) -> Box<dyn for<'b> MatchEngine<'b>> {
         if query.trim().is_empty() {
             self.inner.create_engine_with_case(query, case)
         } else {
@@ -155,7 +155,7 @@ impl AndOrEngineFactory {
         }
     }
 
-    fn parse_and(&self, query: &str, case: CaseMatching) -> Box<dyn MatchEngine> {
+    fn parse_and(&self, query: &str, case: CaseMatching) -> Box<dyn for<'b> MatchEngine<'b>> {
         let query_trim = query.trim_matches(|c| c == ' ' || c == '|');
         let mut engines = vec![];
         let mut last = 0;
@@ -191,7 +191,7 @@ impl AndOrEngineFactory {
 }
 
 impl MatchEngineFactory for AndOrEngineFactory {
-    fn create_engine_with_case(&self, query: &str, case: CaseMatching) -> Box<dyn MatchEngine> {
+    fn create_engine_with_case(&self, query: &str, case: CaseMatching) -> Box<dyn for<'b> MatchEngine<'b>> {
         self.parse_or(query, case)
     }
 }
@@ -219,7 +219,7 @@ impl RegexEngineFactory {
 }
 
 impl MatchEngineFactory for RegexEngineFactory {
-    fn create_engine_with_case(&self, query: &str, case: CaseMatching) -> Box<dyn MatchEngine> {
+    fn create_engine_with_case(&self, query: &str, case: CaseMatching) -> Box<dyn for<'b> MatchEngine<'b>> {
         Box::new(
             RegexEngine::builder(query, case)
                 .rank_builder(self.rank_builder.clone())

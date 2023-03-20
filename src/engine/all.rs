@@ -27,7 +27,7 @@ impl MatchAllEngine {
     }
 }
 
-impl MatchEngine for MatchAllEngine {
+impl MatchEngine<'_> for MatchAllEngine {
     fn match_item(&self, item: &dyn SkimItem) -> Option<MatchResult> {
         let item_len = item.text().len();
         Some(MatchResult {

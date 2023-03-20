@@ -5,7 +5,7 @@ use crate::{MatchEngine, MatchRange, MatchResult, SkimItem};
 //------------------------------------------------------------------------------
 // OrEngine, a combinator
 pub struct OrEngine {
-    engines: Vec<Box<dyn MatchEngine>>,
+    engines: Vec<Box<dyn for<'b> MatchEngine<'b>>>,
 }
 
 impl OrEngine {
@@ -13,7 +13,7 @@ impl OrEngine {
         Self { engines: vec![] }
     }
 
-    pub fn engines(mut self, mut engines: Vec<Box<dyn MatchEngine>>) -> Self {
+    pub fn engines(mut self, mut engines: Vec<Box<dyn for<'b> MatchEngine<'b>>>) -> Self {
         self.engines.append(&mut engines);
         self
     }
@@ -23,7 +23,7 @@ impl OrEngine {
     }
 }
 
-impl MatchEngine for OrEngine {
+impl MatchEngine<'_> for OrEngine {
     fn match_item(&self, item: &dyn SkimItem) -> Option<MatchResult> {
         for engine in &self.engines {
             let result = engine.match_item(item);
@@ -53,7 +53,7 @@ impl Display for OrEngine {
 //------------------------------------------------------------------------------
 // AndEngine, a combinator
 pub struct AndEngine {
-    engines: Vec<Box<dyn MatchEngine>>,
+    engines: Vec<Box<dyn for<'b> MatchEngine<'b>>>,
 }
 
 impl AndEngine {
@@ -61,7 +61,7 @@ impl AndEngine {
         Self { engines: vec![] }
     }
 
-    pub fn engines(mut self, mut engines: Vec<Box<dyn MatchEngine>>) -> Self {
+    pub fn engines(mut self, mut engines: Vec<Box<dyn for<'b> MatchEngine<'b>>>) -> Self {
         self.engines.append(&mut engines);
         self
     }
@@ -93,7 +93,7 @@ impl AndEngine {
     }
 }
 
-impl MatchEngine for AndEngine {
+impl MatchEngine<'_> for AndEngine {
     fn match_item(&self, item: &dyn SkimItem) -> Option<MatchResult> {
         // mock
         let mut results = vec![];

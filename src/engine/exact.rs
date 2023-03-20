@@ -73,7 +73,7 @@ impl ExactEngine {
     }
 }
 
-impl MatchEngine for ExactEngine {
+impl MatchEngine<'_> for ExactEngine {
     fn match_item(&self, item: &dyn SkimItem) -> Option<MatchResult> {
         let item_text = item.text();
         let default_range = [(0, item_text.len())];

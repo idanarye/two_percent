@@ -248,13 +248,13 @@ impl MatchResult {
     }
 }
 
-pub trait MatchEngine: Sync + Send + Display {
+pub trait MatchEngine<'b>: Sync + Send + Display + 'b {
     fn match_item(&self, item: &dyn SkimItem) -> Option<MatchResult>;
 }
 
 pub trait MatchEngineFactory {
-    fn create_engine_with_case(&self, query: &str, case: CaseMatching) -> Box<dyn MatchEngine>;
-    fn create_engine(&self, query: &str) -> Box<dyn MatchEngine> {
+    fn create_engine_with_case(&self, query: &str, case: CaseMatching) -> Box<dyn for<'b> MatchEngine<'b>>;
+    fn create_engine(&self, query: &str) -> Box<dyn for<'b> MatchEngine<'b>> {
         self.create_engine_with_case(query, CaseMatching::default())
     }
 }
