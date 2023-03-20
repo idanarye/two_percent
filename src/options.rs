@@ -56,7 +56,7 @@ pub struct SkimOptions<'a> {
     pub select1: bool,
     pub exit0: bool,
     pub sync: bool,
-    pub selector: Option<Rc<dyn Selector>>,
+    pub selector: Option<Rc<dyn for<'e> Selector<'e>>>,
     pub no_clear_if_empty: bool,
 }
 

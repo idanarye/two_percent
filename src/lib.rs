@@ -3,7 +3,6 @@ extern crate lazy_static;
 #[macro_use]
 extern crate log;
 
-use std::any::Any;
 use std::borrow::Cow;
 use std::fmt::Display;
 use std::sync::mpsc::channel;
@@ -43,22 +42,6 @@ mod selection;
 mod spinlock;
 mod theme;
 mod util;
-
-//------------------------------------------------------------------------------
-pub trait AsAny {
-    fn as_any(&self) -> &dyn Any;
-    fn as_any_mut(&mut self) -> &mut dyn Any;
-}
-
-impl<T: Any> AsAny for T {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-}
 
 /// A `SkimItem` defines what's been processed(fetched, matched, previewed and returned) by skim
 ///
@@ -263,8 +246,8 @@ pub trait MatchEngineFactory<'d>: 'd {
 // Preselection
 
 /// A selector that determines whether an item should be "pre-selected" in multi-selection mode
-pub trait Selector {
-    fn should_select(&self, index: usize, item: &dyn SkimItem) -> bool;
+pub trait Selector<'e>: 'e {
+    fn should_select(&self, index: usize, item: &dyn SkimItem<'e>) -> bool;
 }
 
 //------------------------------------------------------------------------------

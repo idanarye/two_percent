@@ -38,7 +38,7 @@ impl DefaultSkimSelector {
     }
 }
 
-impl Selector for DefaultSkimSelector {
+impl Selector<'_> for DefaultSkimSelector {
     fn should_select(&self, index: usize, item: &dyn SkimItem) -> bool {
         if self.first_n > index {
             return true;

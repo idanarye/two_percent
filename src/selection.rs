@@ -57,7 +57,7 @@ pub struct Selection {
     // To avoid remember all items, we'll track the latest run_num and index.
     latest_select_run_num: u32,
     pre_selected_watermark: usize,
-    selector: Option<Rc<dyn Selector>>,
+    selector: Option<Rc<dyn for<'e> Selector<'e>>>,
 }
 
 impl Selection {
