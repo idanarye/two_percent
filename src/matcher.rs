@@ -105,9 +105,7 @@ impl Matcher {
 
             trace!("matcher start, total: {}", items.len());
 
-            let filter_op = |index: usize,
-                             item: &Arc<dyn for<'a> SkimItem<'a> + Sync + Send>|
-             -> Option<Result<MatchedItem, &str>> {
+            let filter_op = |index: usize, item: &Arc<dyn for<'a> SkimItem<'a>>| -> Option<Result<MatchedItem, &str>> {
                 processed.fetch_add(1, Ordering::Relaxed);
 
                 if matcher_disabled {

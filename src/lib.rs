@@ -251,8 +251,8 @@ pub trait Selector<'e>: 'e {
 }
 
 //------------------------------------------------------------------------------
-pub type SkimItemSender = Sender<Arc<dyn for<'a> SkimItem<'a> + Send + Sync>>;
-pub type SkimItemReceiver = Receiver<Arc<dyn for<'a> SkimItem<'a> + Send + Sync>>;
+pub type SkimItemSender = Sender<Arc<dyn for<'a> SkimItem<'a>>>;
+pub type SkimItemReceiver = Receiver<Arc<dyn for<'a> SkimItem<'a>>>;
 
 pub struct Skim {}
 

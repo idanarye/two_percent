@@ -480,7 +480,7 @@ impl Model {
         }
 
         let item_len = query.len();
-        let item: Arc<dyn for<'a> SkimItem<'a> + Send + Sync> = Arc::new(query);
+        let item: Arc<dyn for<'a> SkimItem<'a>> = Arc::new(query);
         let new_len = self.item_pool.append(vec![item.clone()]);
         let item_idx = (max(new_len, 1) - 1) as u32;
         let matched_item = MatchedItem {
@@ -723,8 +723,7 @@ impl Model {
         let processed = self.reader_control.as_ref().map(|c| c.is_done()).unwrap_or(true);
         if !processed {
             // take out new items and put them into items
-            let new_items: Vec<Arc<dyn for<'a> SkimItem<'a> + Send + Sync>> =
-                self.reader_control.as_ref().map(|c| c.take()).unwrap();
+            let new_items: Vec<Arc<dyn for<'a> SkimItem<'a>>> = self.reader_control.as_ref().map(|c| c.take()).unwrap();
             let _ = self.item_pool.append(new_items);
         };
 
