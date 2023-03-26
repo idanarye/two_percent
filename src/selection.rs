@@ -2,7 +2,7 @@ use std::cmp::max;
 use std::cmp::min;
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
 use tuikit::prelude::{Event as TermEvent, *};
 
@@ -166,11 +166,7 @@ impl Selection {
 
         let current_run_num = current_run_num();
         for item in items {
-            let upgraded_item = if let Some(upgraded) = item.item.upgrade() {
-                upgraded
-            } else {
-                continue;
-            };
+            let upgraded_item = item.item.upgrade().unwrap();
 
             if self
                 .selector
@@ -178,7 +174,7 @@ impl Selection {
                 .map(|s| s.should_select(item.md_infallible().item_idx as usize, upgraded_item.as_ref()))
                 .unwrap_or(false)
             {
-                self.act_select_raw_item(current_run_num, item.md_infallible().item_idx, upgraded_item.clone());
+                self.act_select_raw_item(current_run_num, item.md_infallible().item_idx, item.item.clone());
             }
         }
         debug!("done perform pre selection for {} items", items.len());
@@ -265,14 +261,14 @@ impl Selection {
     }
 
     pub fn act_select_matched(&mut self, run_num: u32, matched: MatchedItem) {
-        self.act_select_raw_item(run_num, matched.md_infallible().item_idx, matched.item.upgrade().unwrap());
+        self.act_select_raw_item(run_num, matched.md_infallible().item_idx, matched.item);
     }
 
-    pub fn act_select_raw_item(&mut self, run_num: u32, item_index: u32, item: Arc<dyn SkimItem>) {
+    pub fn act_select_raw_item(&mut self, run_num: u32, item_index: u32, item: Weak<dyn SkimItem>) {
         if !self.multi_selection {
             return;
         }
-        self.selected.insert((run_num, item_index), item);
+        self.selected.insert((run_num, item_index), item.upgrade().unwrap());
     }
 
     pub fn act_select_all(&mut self) {
