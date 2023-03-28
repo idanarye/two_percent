@@ -8,6 +8,7 @@ use unicode_width::UnicodeWidthChar;
 
 use crate::field::get_string_by_range;
 use crate::AnsiString;
+use bitflags::_core::str::FromStr;
 
 lazy_static! {
     static ref RE_ESCAPE: Regex = Regex::new(r"['\U{00}]").unwrap();
@@ -401,7 +402,7 @@ pub fn str_lines(string: &str) -> Vec<&str> {
     string.trim_end().split('\n').collect()
 }
 
-pub fn atoi<T: std::str::FromStr>(string: &str) -> Option<T> {
+pub fn atoi<T: FromStr>(string: &str) -> Option<T> {
     RE_NUMBER.find(string).and_then(|mat| mat.as_str().parse::<T>().ok())
 }
 

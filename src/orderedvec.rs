@@ -5,16 +5,15 @@
 use rayon::prelude::ParallelSliceMut;
 use std::cell::{Ref, RefCell};
 use std::cmp::Ordering;
-use defer_drop::DeferDrop;
 
 const ORDERED_SIZE: usize = 300;
 const MAX_MOVEMENT: usize = 100;
 
-pub struct OrderedVec<T: Send + Ord + 'static> {
+pub struct OrderedVec<T: Send + Ord> {
     // sorted vectors for merge, reverse ordered, last one is the smallest one
-    sub_vectors: RefCell<DeferDrop<Vec<Vec<T>>>>,
+    sub_vectors: RefCell<Vec<Vec<T>>>,
     // globally sorted items, the first one is the smallest one.
-    sorted: RefCell<DeferDrop<Vec<T>>>,
+    sorted: RefCell<Vec<T>>,
     tac: bool,
     nosort: bool,
 }
@@ -22,8 +21,8 @@ pub struct OrderedVec<T: Send + Ord + 'static> {
 impl<T: Send + Ord> OrderedVec<T> {
     pub fn new() -> Self {
         OrderedVec {
-            sub_vectors: RefCell::new(DeferDrop::new(Vec::new())),
-            sorted: RefCell::new(DeferDrop::new(Vec::with_capacity(ORDERED_SIZE))),
+            sub_vectors: RefCell::new(Vec::new()),
+            sorted: RefCell::new(Vec::with_capacity(ORDERED_SIZE)),
             tac: false,
             nosort: false,
         }
@@ -72,7 +71,7 @@ impl<T: Send + Ord> OrderedVec<T> {
             // means the current sorted vector contains item that's large
             // so we'll move the sorted vector to partially sorted candidates.
             self.sort_vector(&mut sorted, false);
-            let old_vec = DeferDrop::into_inner(self.sorted.replace(DeferDrop::new(Vec::new())));
+            let old_vec = self.sorted.replace(Vec::new());
             self.sub_vectors.borrow_mut().push(old_vec);
         } else {
             self.sort_vector(&mut sorted, true);
@@ -156,8 +155,8 @@ impl<T: Send + Ord> OrderedVec<T> {
     }
 
     pub fn clear(&mut self) {
-        self.sub_vectors.replace(DeferDrop::new(Vec::new()));
-        self.sorted.replace(DeferDrop::new(Vec::new()));
+        self.sub_vectors.replace(Vec::new());
+        self.sorted.replace(Vec::new());
     }
 
     pub fn is_empty(&self) -> bool {
@@ -173,12 +172,12 @@ impl<T: Send + Ord> OrderedVec<T> {
     }
 }
 
-struct OrderedVecIter<'a, T: Send + Ord + 'static> {
+struct OrderedVecIter<'a, T: Send + Ord> {
     ordered_vec: &'a OrderedVec<T>,
     index: usize,
 }
 
-impl<'a, T: Send + Ord + 'static> Iterator for OrderedVecIter<'a, T> {
+impl<'a, T: Send + Ord> Iterator for OrderedVecIter<'a, T> {
     type Item = Ref<'a, T>;
 
     fn next(&mut self) -> Option<Self::Item> {

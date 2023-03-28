@@ -10,7 +10,6 @@ use crate::{DisplayContext, SkimOptions};
 use std::cmp::max;
 use std::sync::Arc;
 use tuikit::prelude::*;
-use defer_drop::DeferDrop;
 
 pub struct Header {
     header: Vec<AnsiString>,
@@ -19,7 +18,7 @@ pub struct Header {
     theme: Arc<ColorTheme>,
 
     // for reserved header items
-    item_pool: Arc<DeferDrop<ItemPool>>,
+    item_pool: Arc<ItemPool>,
 }
 
 impl Header {
@@ -29,11 +28,11 @@ impl Header {
             tabstop: 8,
             reverse: false,
             theme: Arc::new(*DEFAULT_THEME),
-            item_pool: Arc::new(DeferDrop::new(ItemPool::new())),
+            item_pool: Arc::new(ItemPool::new()),
         }
     }
 
-    pub fn item_pool(mut self, item_pool: Arc<DeferDrop<ItemPool>>) -> Self {
+    pub fn item_pool(mut self, item_pool: Arc<ItemPool>) -> Self {
         self.item_pool = item_pool;
         self
     }
