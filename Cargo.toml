@@ -36,14 +36,15 @@ rayon = { version = "1.8.0",  default-features = false }
 derive_builder = { version = "0.12.0", default-features = false }
 bitflags = { version = "2.4.1", default-features = false }
 timer = { version = "0.2.0", default-features = false }
-chrono = { version = "0.4.31", default-features = false }
+chrono = { versqion = "0.4.31", default-features = false }
 crossbeam-channel = { version = "0.5.8", default-features = false, features = ["std"] }
 defer-drop = { version = "1.3.0", default-features = false }
 which = { version = "5.0.0", default-features = false }
 libc = { version = "0.2.150", optional = true, default-features = false }
 
 [patch.crates-io]
-timer = { git = "https://github.com/kimono-koans/timer.rs" }
+timer = { git = "https://github.com/kimono-koans/timer.rs.git" }
+tuikit = { git = "https://github.com/kimono-koans/tuikit.git", branch = "vendored" }
 
 [features]
 default = ["cli"]
