@@ -8,7 +8,6 @@ use std::time::{Duration, Instant};
 
 use chrono::Duration as TimerDuration;
 use defer_drop::DeferDrop;
-use rayon::ThreadPool;
 use regex::Regex;
 use timer::{Guard as TimerGuard, Timer};
 use tuikit::prelude::{Event as TermEvent, *};
@@ -72,7 +71,6 @@ pub struct Model {
     matcher_timer: Instant,
     reader_control: Option<DeferDrop<ReaderControl>>,
     matcher_control: Option<DeferDrop<MatcherControl>>,
-    matcher_thread_pool: Arc<ThreadPool>,
 
     header: Header,
 
@@ -140,12 +138,6 @@ impl Model {
 
         let disabled = options.disabled;
 
-        let matcher_thread_pool = Arc::new(
-            rayon::ThreadPoolBuilder::new()
-                .build()
-                .expect("Could not initialize rayon threadpool"),
-        );
-
         let rank_builder = Arc::new(RankBuilder::new(criterion));
 
         let selection = DeferDrop::new(Selection::with_options(options).theme(theme.clone()));
@@ -188,7 +180,6 @@ impl Model {
             exit0: false,
             sync: false,
             disabled,
-            matcher_thread_pool,
             use_regex: options.regex,
             regex_matcher,
             matcher,
@@ -777,13 +768,7 @@ impl Model {
             &self.matcher
         };
 
-        let new_matcher_control = matcher.run(
-            &query,
-            self.disabled,
-            Arc::downgrade(&self.matcher_thread_pool),
-            Arc::downgrade(&self.item_pool),
-            self.tx.clone(),
-        );
+        let new_matcher_control = matcher.run(&query, self.disabled, Arc::downgrade(&self.item_pool), self.tx.clone());
 
         // replace None matcher
         if let Some(mut old_matcher) = self.matcher_control.replace(DeferDrop::new(new_matcher_control)) {

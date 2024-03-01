@@ -23,6 +23,8 @@ name = "sk"
 path = "src/bin/main.rs"
 
 [dependencies]
+ahash = { version = "0.8.8", default-features = false }
+nohash-hasher = { version = "*" }
 nix = { version = "0.28.0", default-features = false }
 regex = { version = "1.10.2", features = ["unicode-perl"] }
 lazy_static = { version = "1.4.0", default-features = false }
@@ -35,7 +37,8 @@ clap = { version = "3.2.25", optional = true, features = ["cargo"] }
 tuikit = { version = "0.5.0", default-features = false }
 vte = { version = "0.13.0", default-features = false }
 fuzzy-muff = { version = "0.3.13", default-features = false }
-rayon = { version = "1.8.1", default-features = false }
+hashbrown = { version = "*" }
+once_cell = { version = "*" }
 derive_builder = { version = "0.20.0", default-features = false, features = [
     "alloc",
 ] }
