@@ -4,7 +4,6 @@ use std::sync::{Arc, Weak};
 use std::thread::{self, JoinHandle};
 
 use defer_drop::DeferDrop;
-use rayon::prelude::*;
 use rayon::ThreadPool;
 
 use tuikit::key::Key;
@@ -12,9 +11,13 @@ use tuikit::key::Key;
 use crate::event::Event;
 use crate::item::{ItemPool, MatchedItem};
 use crate::spinlock::SpinLock;
-use crate::{CaseMatching, MatchEngine, MatchEngineFactory, SkimItem};
+use crate::{CaseMatching, MatchEngineFactory, MatchResult};
 use crate::{MatchRange, Rank};
 use std::rc::Rc;
+
+use hashbrown::HashMap;
+use nohash::NoHashHasher;
+use std::hash::BuildHasherDefault;
 
 #[cfg(feature = "malloc_trim")]
 #[cfg(target_os = "linux")]
@@ -138,39 +141,75 @@ impl Matcher {
                         trace!("matcher start, total: {}", items.len());
 
                         if let Some(matched_items_strong) = Weak::upgrade(&matched_items_weak) {
+                            let mut group_map: HashMap<
+                                u64,
+                                (Vec<usize>, Option<Option<MatchResult>>),
+                                BuildHasherDefault<NoHashHasher<u64>>,
+                            > = HashMap::with_capacity_and_hasher(8192, BuildHasherDefault::default());
+
+                            items.iter().enumerate().for_each(|(idx, item)| {
+                                let key = std::ptr::addr_of!(item) as u64;
+
+                                match group_map.get_mut(&key) {
+                                    Some(values) => {
+                                        values.0.push(idx);
+                                    }
+                                    None => {
+                                        let _ = group_map.insert_unique_unchecked(key, (vec![idx], None));
+                                    }
+                                }
+                            });
+
                             let par_iter = items
-                                .par_iter()
+                                .iter()
                                 .enumerate()
-                                .chunks(4096)
-                                .take_any_while(|vec| {
+                                .take_while(|_| {
                                     if stopped_ref.load(Ordering::Relaxed) {
                                         return false;
                                     }
 
-                                    processed_ref.fetch_add(vec.len(), Ordering::Relaxed);
+                                    processed_ref.fetch_add(1, Ordering::Relaxed);
                                     true
                                 })
-                                .flatten()
                                 .filter_map(|(index, item)| {
                                     // dummy values should not change, as changing them
                                     // may cause the disabled/query empty case disappear!
                                     // especially item index.  Needs an index to appear!
+
+                                    let key = std::ptr::addr_of!(item) as u64;
+
+                                    group_map
+                                        .get_mut(&key)
+                                        .and_then(|values| match &values.1 {
+                                            Some(res) => res.to_owned(),
+                                            None => matcher_engine.match_item(item.as_ref()),
+                                        })
+                                        .map(|res| (index, res, item))
+                                })
+                                .map(|(index, res, item)| {
                                     if matcher_disabled {
-                                        return Some(MatchedItem {
+                                        return MatchedItem {
                                             item: Arc::downgrade(item),
                                             rank: UNMATCHED_RANK,
                                             matched_range: UNMATCHED_RANGE,
                                             item_idx: (num_taken + index) as u32,
-                                        });
+                                        };
                                     }
 
-                                    process_item(index, num_taken, matched_ref, matcher_engine.as_ref(), item)
+                                    matched_ref.fetch_add(1, Ordering::Relaxed);
+
+                                    MatchedItem {
+                                        item: Arc::downgrade(item),
+                                        rank: res.rank,
+                                        matched_range: Some(res.matched_range),
+                                        item_idx: (num_taken + index) as u32,
+                                    }
                                 });
 
                             if !stopped_ref.load(Ordering::Relaxed) {
                                 let mut pool = matched_items_strong.lock();
                                 pool.clear();
-                                pool.par_extend(par_iter);
+                                pool.extend(par_iter);
                                 trace!("matcher stop, total matched: {}", pool.len());
                             }
                         }
@@ -190,23 +229,4 @@ impl Matcher {
             opt_thread_handle: Some(matcher_handle),
         }
     }
-}
-
-fn process_item(
-    index: usize,
-    num_taken: usize,
-    matched: &AtomicUsize,
-    matcher_engine: &dyn MatchEngine,
-    item: &Arc<dyn SkimItem>,
-) -> Option<MatchedItem> {
-    matcher_engine.match_item(item.as_ref()).map(|match_result| {
-        matched.fetch_add(1, Ordering::Relaxed);
-
-        MatchedItem {
-            item: Arc::downgrade(item),
-            rank: match_result.rank,
-            matched_range: Some(match_result.matched_range),
-            item_idx: (num_taken + index) as u32,
-        }
-    })
 }
