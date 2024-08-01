@@ -45,8 +45,8 @@ impl RegexEngine {
     }
 }
 
-impl MatchEngine for RegexEngine {
-    fn match_item(&self, item: &dyn SkimItem) -> Option<MatchResult> {
+impl<T: SkimItem> MatchEngine<T> for RegexEngine {
+    fn match_item(&self, item: &T) -> Option<MatchResult> {
         let item_text = item.text();
         let default_range = [(0, item_text.len())];
         let matched_result = item

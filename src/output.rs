@@ -3,7 +3,7 @@ use crate::SkimItem;
 use std::sync::Arc;
 use tuikit::key::Key;
 
-pub struct SkimOutput {
+pub struct SkimOutput<T: SkimItem> {
     /// The final event that makes skim accept/quit.
     /// Was designed to determine if skim quit or accept.
     /// Typically there are only two options: `Event::EvActAbort` | `Event::EvActAccept`
@@ -23,5 +23,5 @@ pub struct SkimOutput {
     pub cmd: String,
 
     /// The selected items.
-    pub selected_items: Vec<Arc<dyn SkimItem>>,
+    pub selected_items: Vec<Arc<T>>,
 }

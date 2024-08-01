@@ -1,5 +1,5 @@
 ///! Handle the color theme
-use crate::options::SkimOptions;
+use crate::{options::SkimOptions, SkimItem};
 use std::sync::LazyLock;
 use tuikit::prelude::*;
 
@@ -47,7 +47,7 @@ pub struct ColorTheme {
 #[rustfmt::skip]
 #[allow(dead_code)]
 impl ColorTheme {
-    pub fn init_from_options(options: &SkimOptions) -> ColorTheme {
+    pub fn init_from_options(options: &SkimOptions<impl SkimItem>) -> ColorTheme {
         // register
         if let Some(color) = options.color {
             ColorTheme::from_options(color)

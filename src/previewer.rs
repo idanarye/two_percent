@@ -26,7 +26,7 @@ use crate::malloc_trim;
 const TAB_STOP: usize = 8;
 const DELIMITER_STR: &str = r"[\t\n ]+";
 
-pub struct Previewer {
+pub struct Previewer<T: SkimItem> {
     tx_preview: Sender<PreviewEvent>,
     content_lines: Arc<SpinLock<Vec<AnsiString>>>,
 
@@ -36,7 +36,7 @@ pub struct Previewer {
     vscroll_offset: Arc<AtomicUsize>,
     wrap: bool,
 
-    prev_item: Option<Arc<dyn SkimItem>>,
+    prev_item: Option<Arc<T>>,
     prev_query: Option<String>,
     prev_cmd_query: Option<String>,
     prev_num_selected: usize,
@@ -47,7 +47,7 @@ pub struct Previewer {
     thread_previewer: Option<JoinHandle<()>>,
 }
 
-impl Previewer {
+impl<T: SkimItem> Previewer<T> {
     pub fn new(preview_cmd: Option<String>, callback: Box<dyn Fn() + Send + Sync>) -> Self {
         let content_lines = Arc::new(SpinLock::new(Vec::new()));
         let (tx_preview, rx_preview) = unbounded();
@@ -128,7 +128,7 @@ impl Previewer {
         new_query: impl Into<Option<String>>,
         new_cmd_query: impl Into<Option<String>>,
         num_selected: usize,
-        get_selected_items: impl Fn() -> (Vec<usize>, Vec<MatchedItem>), // LazyLock get
+        get_selected_items: impl Fn() -> (Vec<usize>, Vec<MatchedItem<T>>), // LazyLock get
         force: bool,
     ) {
         let new_item = new_item.into();
@@ -334,13 +334,13 @@ impl Previewer {
     }
 }
 
-impl Drop for Previewer {
+impl<T: SkimItem> Drop for Previewer<T> {
     fn drop(&mut self) {
         self.kill()
     }
 }
 
-impl EventHandler for Previewer {
+impl<T: SkimItem> EventHandler for Previewer<T> {
     fn handle(&mut self, event: &Event) -> UpdateScreen {
         use crate::event::Event::*;
         let height = self.height.load(Ordering::Relaxed);
@@ -358,7 +358,7 @@ impl EventHandler for Previewer {
     }
 }
 
-impl Draw for Previewer {
+impl<T: SkimItem> Draw for Previewer<T> {
     fn draw(&self, canvas: &mut dyn Canvas) -> DrawResult<()> {
         canvas.clear()?;
         let (screen_width, screen_height) = canvas.size()?;
@@ -403,7 +403,7 @@ impl Draw for Previewer {
     }
 }
 
-impl Widget<Event> for Previewer {
+impl<T: SkimItem> Widget<Event> for Previewer<T> {
     fn on_event(&self, event: TermEvent, _rect: Rectangle) -> Vec<Event> {
         let mut ret = vec![];
         match event {

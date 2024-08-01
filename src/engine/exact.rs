@@ -73,8 +73,8 @@ impl ExactEngine {
     }
 }
 
-impl MatchEngine for ExactEngine {
-    fn match_item(&self, item: &dyn SkimItem) -> Option<MatchResult> {
+impl<T: SkimItem> MatchEngine<T> for ExactEngine {
+    fn match_item(&self, item: &T) -> Option<MatchResult> {
         let item_text = item.text();
         let item_len = item_text.len();
         let query_regex = &self.query_regex;

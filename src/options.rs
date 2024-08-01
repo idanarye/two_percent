@@ -4,14 +4,14 @@ use derive_builder::Builder;
 
 use crate::helper::item_reader::SkimItemReader;
 use crate::reader::CommandCollector;
-use crate::{CaseMatching, FuzzyAlgorithm, MatchEngineFactory, Selector};
+use crate::{CaseMatching, FuzzyAlgorithm, MatchEngineFactory, Selector, SkimItem};
 use std::cell::RefCell;
 use std::sync::Arc;
 
 #[derive(Builder)]
 #[builder(build_fn(name = "final_build"))]
 #[builder(default)]
-pub struct SkimOptions<'a> {
+pub struct SkimOptions<'a, T: SkimItem> {
     pub bind: Vec<&'a str>,
     pub multi: bool,
     pub prompt: Option<&'a str>,
@@ -48,10 +48,10 @@ pub struct SkimOptions<'a> {
     pub layout: &'a str,
     pub algorithm: FuzzyAlgorithm,
     pub case: CaseMatching,
-    pub engine_factory: Option<Rc<dyn MatchEngineFactory>>,
+    pub engine_factory: Option<Rc<dyn MatchEngineFactory<T>>>,
     pub query_history: &'a [String],
     pub cmd_history: &'a [String],
-    pub cmd_collector: Rc<RefCell<dyn CommandCollector>>,
+    pub cmd_collector: Rc<RefCell<dyn CommandCollector<T>>>,
     pub keep_right: bool,
     pub skip_to_pattern: &'a str,
     pub select1: bool,
@@ -61,7 +61,7 @@ pub struct SkimOptions<'a> {
     pub no_clear_if_empty: bool,
 }
 
-impl<'a> Default for SkimOptions<'a> {
+impl<'a, T: SkimItem> Default for SkimOptions<'a, T> {
     fn default() -> Self {
         Self {
             bind: vec![],
@@ -115,15 +115,15 @@ impl<'a> Default for SkimOptions<'a> {
     }
 }
 
-impl<'a> Drop for SkimOptionsBuilder<'a> {
+impl<'a, T: SkimItem> Drop for SkimOptionsBuilder<'a, T> {
     fn drop(&mut self) {
         self.cmd_collector.take();
         self.engine_factory.take();
     }
 }
 
-impl<'a> SkimOptionsBuilder<'a> {
-    pub fn build(&mut self) -> Result<SkimOptions<'a>, SkimOptionsBuilderError> {
+impl<'a, T: SkimItem> SkimOptionsBuilder<'a, T> {
+    pub fn build(&mut self) -> Result<SkimOptions<'a, T>, SkimOptionsBuilderError> {
         if let Some(true) = self.no_height {
             self.height = Some(Some("100%"));
         }

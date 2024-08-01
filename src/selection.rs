@@ -20,10 +20,10 @@ use unicode_width::UnicodeWidthStr;
 
 type ItemIndex = (u32, u32);
 
-pub struct Selection {
+pub struct Selection<T: SkimItem> {
     // all items
-    items: OrderedVec<MatchedItem>,
-    selected: BTreeMap<ItemIndex, MatchedItem>,
+    items: OrderedVec<MatchedItem<T>>,
+    selected: BTreeMap<ItemIndex, MatchedItem<T>>,
 
     //
     // |>------ items[items.len()-1]
@@ -59,7 +59,7 @@ pub struct Selection {
     selector: Option<Arc<dyn Selector>>,
 }
 
-impl Drop for Selection {
+impl<T: SkimItem> Drop for Selection<T> {
     fn drop(&mut self) {
         let items = std::mem::take(&mut self.items);
         let selected = std::mem::take(&mut self.selected);
@@ -69,13 +69,13 @@ impl Drop for Selection {
     }
 }
 
-impl Default for Selection {
+impl<T: SkimItem> Default for Selection<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Selection {
+impl<T: SkimItem> Selection<T> {
     pub fn new() -> Self {
         Selection {
             items: OrderedVec::new(),
@@ -97,13 +97,13 @@ impl Selection {
         }
     }
 
-    pub fn with_options(options: &SkimOptions) -> Self {
+    pub fn with_options(options: &SkimOptions<T>) -> Self {
         let mut selection = Self::new();
         selection.parse_options(options);
         selection
     }
 
-    fn parse_options(&mut self, options: &SkimOptions) {
+    fn parse_options(&mut self, options: &SkimOptions<T>) {
         if options.multi {
             self.multi_selection = true;
         }
@@ -142,7 +142,7 @@ impl Selection {
         self
     }
 
-    pub fn append_sorted_items(&mut self, items: Vec<MatchedItem>) {
+    pub fn append_sorted_items(&mut self, items: Vec<MatchedItem<T>>) {
         debug!("append_sorted_items: num: {}", items.len());
         let current_run_num = current_run_num();
         if !items.is_empty() && current_run_num > self.latest_select_run_num {
@@ -173,7 +173,7 @@ impl Selection {
         self.items.clear();
     }
 
-    fn pre_select(&mut self, items: &[MatchedItem]) {
+    fn pre_select(&mut self, items: &[MatchedItem<T>]) {
         debug!("perform pre selection for {} items", items.len());
         if self.selector.is_none() || !self.multi_selection {
             return;
@@ -272,11 +272,11 @@ impl Selection {
         }
     }
 
-    pub fn act_select_matched(&mut self, run_num: u32, matched: MatchedItem) {
+    pub fn act_select_matched(&mut self, run_num: u32, matched: MatchedItem<T>) {
         self.act_select_raw_item(run_num, matched.item_idx, matched);
     }
 
-    pub fn act_select_raw_item(&mut self, run_num: u32, item_index: u32, item: MatchedItem) {
+    pub fn act_select_raw_item(&mut self, run_num: u32, item_index: u32, item: MatchedItem<T>) {
         if !self.multi_selection {
             return;
         }
@@ -304,10 +304,10 @@ impl Selection {
         self.hscroll_offset += offset as i64;
     }
 
-    pub fn get_selected_indices_and_items(&self) -> (Vec<usize>, Vec<MatchedItem>) {
+    pub fn get_selected_indices_and_items(&self) -> (Vec<usize>, Vec<MatchedItem<T>>) {
         // select the current one
         let select_cursor = !self.multi_selection || self.selected.is_empty();
-        let mut selected: Vec<MatchedItem> = self.selected.values().cloned().collect();
+        let mut selected: Vec<MatchedItem<T>> = self.selected.values().cloned().collect();
 
         let mut item_indices: Vec<usize> = self.selected.keys().map(|(_run, idx)| *idx as usize).collect();
 
@@ -368,7 +368,7 @@ impl Selection {
     }
 }
 
-impl EventHandler for Selection {
+impl<T: SkimItem> EventHandler for Selection<T> {
     fn handle(&mut self, event: &Event) -> UpdateScreen {
         use crate::event::Event::*;
         match event {
@@ -421,12 +421,12 @@ impl EventHandler for Selection {
     }
 }
 
-impl Selection {
+impl<T: SkimItem> Selection<T> {
     fn draw_item(
         &self,
         canvas: &mut dyn Canvas,
         row: usize,
-        matched_item: &MatchedItem,
+        matched_item: &MatchedItem<T>,
         is_current: bool,
     ) -> DrawResult<()> {
         let (screen_width, screen_height) = canvas.size()?;
@@ -544,7 +544,7 @@ impl Selection {
     }
 }
 
-impl Draw for Selection {
+impl<T: SkimItem> Draw for Selection<T> {
     fn draw(&self, canvas: &mut dyn Canvas) -> DrawResult<()> {
         let (_screen_width, screen_height) = canvas.size()?;
         canvas.clear()?;
@@ -581,7 +581,7 @@ impl Draw for Selection {
     }
 }
 
-impl Widget<Event> for Selection {
+impl<T: SkimItem> Widget<Event> for Selection<T> {
     fn on_event(&self, event: TermEvent, _rect: Rectangle) -> Vec<Event> {
         let mut ret = vec![];
         match event {

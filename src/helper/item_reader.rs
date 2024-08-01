@@ -138,7 +138,7 @@ impl SkimItemReader {
 }
 
 impl SkimItemReader {
-    pub fn of_bufread(&self, source: Box<dyn BufRead + Send>) -> (SkimItemReceiver, Option<JoinHandle<()>>) {
+    pub fn of_bufread<T: SkimItem>(&self, source: Box<dyn BufRead + Send>) -> (SkimItemReceiver<T>, Option<JoinHandle<()>>) {
         if self.option.is_simple() {
             self.raw_bufread(source)
         } else {
@@ -149,8 +149,8 @@ impl SkimItemReader {
     }
 
     /// helper: convert bufread into SkimItemReceiver
-    fn raw_bufread(&self, source: Box<dyn BufRead + Send>) -> (SkimItemReceiver, Option<JoinHandle<()>>) {
-        let (tx_item, rx_item): (SkimItemSender, SkimItemReceiver) = unbounded();
+    fn raw_bufread<T: SkimItem>(&self, source: Box<dyn BufRead + Send>) -> (SkimItemReceiver<T>, Option<JoinHandle<()>>) {
+        let (tx_item, rx_item): (SkimItemSender<T>, SkimItemReceiver<T>) = unbounded();
         let line_ending = self.option.line_ending;
 
         let ingest_handle = thread::spawn(move || {
@@ -163,13 +163,13 @@ impl SkimItemReader {
     /// components_to_stop == 0 => all the threads have been stopped
     /// return (channel_for_receive_item, channel_to_stop_command)
     #[allow(clippy::type_complexity)]
-    fn read_and_collect_from_command(
+    fn read_and_collect_from_command<T: SkimItem>(
         &self,
         components_to_stop: Arc<AtomicUsize>,
         input: CollectorInput,
-    ) -> (Receiver<Arc<dyn SkimItem>>, Sender<i32>, Option<JoinHandle<()>>) {
+    ) -> (Receiver<Arc<T>>, Sender<i32>, Option<JoinHandle<()>>) {
         let (tx_interrupt, rx_interrupt) = bounded(CMD_CHANNEL_SIZE);
-        let (tx_item, rx_item): (SkimItemSender, SkimItemReceiver) = unbounded();
+        let (tx_item, rx_item): (SkimItemSender<T>, SkimItemReceiver<T>) = unbounded();
 
         match input {
             CollectorInput::Pipe(source) => {
@@ -250,12 +250,12 @@ impl SkimItemReader {
     }
 }
 
-impl CommandCollector for SkimItemReader {
+impl<T: SkimItem> CommandCollector<T> for SkimItemReader {
     fn invoke(
         &mut self,
         cmd: &str,
         components_to_stop: Arc<AtomicUsize>,
-    ) -> (SkimItemReceiver, Sender<i32>, Option<JoinHandle<()>>) {
+    ) -> (SkimItemReceiver<T>, Sender<i32>, Option<JoinHandle<()>>) {
         self.read_and_collect_from_command(components_to_stop, CollectorInput::Command(cmd.to_string()))
     }
 }

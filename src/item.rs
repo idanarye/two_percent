@@ -61,37 +61,41 @@ impl RankBuilder {
 }
 
 //------------------------------------------------------------------------------
-#[derive(Clone)]
-pub struct MatchedItem {
-    pub item: Weak<dyn SkimItem>,
+pub struct MatchedItem<T: SkimItem> {
+    pub item: Weak<T>,
     pub rank: Rank,
     pub matched_range: Option<MatchRange>, // range of chars that matched the pattern
     pub item_idx: u32,
 }
 
-impl MatchedItem {
-    pub fn upgrade_infallible(&self) -> Arc<dyn SkimItem> {
-        self.item.upgrade().unwrap_or(Arc::new(""))
+impl<T: SkimItem> Clone for MatchedItem<T> {
+    fn clone(&self) -> Self {
+        Self {
+            item: self.item.clone(),
+            rank: self.rank,
+            matched_range: self.matched_range.clone(),
+            item_idx: self.item_idx,
+        }
     }
 }
 
 use std::cmp::Ordering as CmpOrd;
 
-impl PartialEq for MatchedItem {
+impl<T: SkimItem> PartialEq for MatchedItem<T> {
     fn eq(&self, other: &Self) -> bool {
         self.rank.eq(&other.rank)
     }
 }
 
-impl std::cmp::Eq for MatchedItem {}
+impl<T: SkimItem> std::cmp::Eq for MatchedItem<T> {}
 
-impl PartialOrd for MatchedItem {
+impl<T: SkimItem> PartialOrd for MatchedItem<T> {
     fn partial_cmp(&self, other: &Self) -> Option<CmpOrd> {
         self.rank.partial_cmp(&other.rank)
     }
 }
 
-impl Ord for MatchedItem {
+impl<T: SkimItem> Ord for MatchedItem<T> {
     fn cmp(&self, other: &Self) -> CmpOrd {
         self.rank.cmp(&other.rank)
     }
@@ -100,18 +104,18 @@ impl Ord for MatchedItem {
 //------------------------------------------------------------------------------
 const ITEM_POOL_CAPACITY: usize = 1024;
 
-pub struct ItemPool {
+pub struct ItemPool<T: SkimItem> {
     length: AtomicUsize,
-    pool: SpinLock<Vec<Arc<dyn SkimItem>>>,
+    pool: SpinLock<Vec<Arc<T>>>,
     /// number of items that was `take`n
     taken: AtomicUsize,
 
     /// reverse first N lines as header
-    reserved_items: SpinLock<Vec<Weak<dyn SkimItem>>>,
+    reserved_items: SpinLock<Vec<Weak<T>>>,
     lines_to_reserve: usize,
 }
 
-impl Drop for ItemPool {
+impl<T: SkimItem> Drop for ItemPool<T> {
     fn drop(&mut self) {
         let mut pool = self.pool.lock();
         let mut reserved_items = self.reserved_items.lock();
@@ -121,13 +125,13 @@ impl Drop for ItemPool {
     }
 }
 
-impl Default for ItemPool {
+impl<T: SkimItem> Default for ItemPool<T> {
     fn default() -> Self {
         ItemPool::new()
     }
 }
 
-impl ItemPool {
+impl<T: SkimItem> ItemPool<T> {
     pub fn new() -> Self {
         Self {
             length: AtomicUsize::new(0),

@@ -4,7 +4,7 @@ use crate::engine::exact::{ExactEngine, ExactMatchingParam};
 use crate::engine::fuzzy::{FuzzyAlgorithm, FuzzyEngine};
 use crate::engine::regexp::RegexEngine;
 use crate::item::RankBuilder;
-use crate::{CaseMatching, MatchEngine, MatchEngineFactory};
+use crate::{CaseMatching, MatchEngine, MatchEngineFactory, SkimItem};
 use regex::Regex;
 use std::sync::Arc;
 use std::sync::LazyLock;
@@ -49,8 +49,8 @@ impl ExactOrFuzzyEngineFactory {
     }
 }
 
-impl MatchEngineFactory for ExactOrFuzzyEngineFactory {
-    fn create_engine_with_case(&self, query: &str, case: CaseMatching) -> Box<dyn MatchEngine> {
+impl<T: SkimItem> MatchEngineFactory<T> for ExactOrFuzzyEngineFactory {
+    fn create_engine_with_case(&self, query: &str, case: CaseMatching) -> Box<dyn MatchEngine<T>> {
         // 'abc => match exact "abc"
         // ^abc => starts with "abc"
         // abc$ => ends with "abc"
@@ -131,19 +131,19 @@ impl MatchEngineFactory for ExactOrFuzzyEngineFactory {
 }
 
 //------------------------------------------------------------------------------
-pub struct AndOrEngineFactory {
-    inner: Box<dyn MatchEngineFactory>,
+pub struct AndOrEngineFactory<T: SkimItem> {
+    inner: Box<dyn MatchEngineFactory<T>>,
 }
 
-impl AndOrEngineFactory {
-    pub fn new(factory: Box<dyn MatchEngineFactory>) -> Self {
+impl<T: SkimItem> AndOrEngineFactory<T> {
+    pub fn new(factory: Box<dyn MatchEngineFactory<T>>) -> Self {
         Self { inner: factory }
     }
 
     // we want to treat `\ ` as plain white space
     // regex crate doesn't support look around, so I use a LazyLock workaround
     // that replace `\ ` with `\0` ahead of split and replace it back afterwards
-    fn parse_or(&self, query: &str, case: CaseMatching) -> Box<dyn MatchEngine> {
+    fn parse_or(&self, query: &str, case: CaseMatching) -> Box<dyn MatchEngine<T>> {
         if query.trim().is_empty() {
             self.inner.create_engine_with_case(query, case)
         } else {
@@ -155,7 +155,7 @@ impl AndOrEngineFactory {
         }
     }
 
-    fn parse_and(&self, query: &str, case: CaseMatching) -> Box<dyn MatchEngine> {
+    fn parse_and(&self, query: &str, case: CaseMatching) -> Box<dyn MatchEngine<T>> {
         let query_trim = query.trim_matches(|c| c == ' ' || c == '|');
         let mut engines = vec![];
         let mut last = 0;
@@ -190,8 +190,8 @@ impl AndOrEngineFactory {
     }
 }
 
-impl MatchEngineFactory for AndOrEngineFactory {
-    fn create_engine_with_case(&self, query: &str, case: CaseMatching) -> Box<dyn MatchEngine> {
+impl<T: SkimItem> MatchEngineFactory<T> for AndOrEngineFactory<T> {
+    fn create_engine_with_case(&self, query: &str, case: CaseMatching) -> Box<dyn MatchEngine<T>> {
         self.parse_or(query, case)
     }
 }
@@ -218,8 +218,8 @@ impl RegexEngineFactory {
     }
 }
 
-impl MatchEngineFactory for RegexEngineFactory {
-    fn create_engine_with_case(&self, query: &str, case: CaseMatching) -> Box<dyn MatchEngine> {
+impl<T: SkimItem> MatchEngineFactory<T> for RegexEngineFactory {
+    fn create_engine_with_case(&self, query: &str, case: CaseMatching) -> Box<dyn MatchEngine<T>> {
         Box::new(
             RegexEngine::builder(query, case)
                 .rank_builder(self.rank_builder.clone())

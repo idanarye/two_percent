@@ -8,6 +8,7 @@ use crate::event::{Event, EventHandler, UpdateScreen};
 use crate::options::SkimOptions;
 use crate::theme::{ColorTheme, DEFAULT_THEME};
 use crate::util::clear_canvas;
+use crate::SkimItem;
 
 #[derive(Clone, Copy, PartialEq)]
 enum QueryMode {
@@ -64,7 +65,7 @@ impl Query {
         }
     }
 
-    pub fn from_options(options: &SkimOptions) -> Self {
+    pub fn from_options(options: &SkimOptions<impl SkimItem>) -> Self {
         let mut query = Self::builder();
         query.parse_options(options);
         query
@@ -101,7 +102,7 @@ impl Query {
         self
     }
 
-    fn parse_options(&mut self, options: &SkimOptions) {
+    fn parse_options(&mut self, options: &SkimOptions<impl SkimItem>) {
         // some options accept multiple values, thus take the last one
 
         if let Some(base_cmd) = options.cmd {

@@ -246,13 +246,13 @@ impl MatchResult {
     }
 }
 
-pub trait MatchEngine: Sync + Send + Display {
-    fn match_item(&self, item: &dyn SkimItem) -> Option<MatchResult>;
+pub trait MatchEngine<T: SkimItem>: Sync + Send + Display {
+    fn match_item(&self, item: &T) -> Option<MatchResult>;
 }
 
-pub trait MatchEngineFactory {
-    fn create_engine_with_case(&self, query: &str, case: CaseMatching) -> Box<dyn MatchEngine>;
-    fn create_engine(&self, query: &str) -> Box<dyn MatchEngine> {
+pub trait MatchEngineFactory<T: SkimItem> {
+    fn create_engine_with_case(&self, query: &str, case: CaseMatching) -> Box<dyn MatchEngine<T>>;
+    fn create_engine(&self, query: &str) -> Box<dyn MatchEngine<T>> {
         self.create_engine_with_case(query, CaseMatching::default())
     }
 }
@@ -266,8 +266,8 @@ pub trait Selector: Send + Sync {
 }
 
 //------------------------------------------------------------------------------
-pub type SkimItemSender = Sender<Arc<dyn SkimItem>>;
-pub type SkimItemReceiver = Receiver<Arc<dyn SkimItem>>;
+pub type SkimItemSender<T: SkimItem> = Sender<Arc<T>>;
+pub type SkimItemReceiver<T: SkimItem> = Receiver<Arc<T>>;
 
 pub struct Skim {}
 
@@ -280,7 +280,7 @@ impl Skim {
     /// return:
     /// - None: on internal errors.
     /// - SkimOutput: the collected key, event, query, selected items, etc.
-    pub fn run_with(options: &SkimOptions, source: Option<SkimItemReceiver>) -> Option<SkimOutput> {
+    pub fn run_with<T: SkimItem>(options: &SkimOptions<T>, source: Option<SkimItemReceiver<T>>) -> Option<SkimOutput<T>> {
         let min_height = options
             .min_height
             .map(Skim::parse_height_string)

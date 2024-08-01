@@ -122,8 +122,8 @@ impl FuzzyEngine {
     }
 }
 
-impl MatchEngine for FuzzyEngine {
-    fn match_item(&self, item: &dyn SkimItem) -> Option<MatchResult> {
+impl<T: SkimItem> MatchEngine<T> for FuzzyEngine {
+    fn match_item(&self, item: &T) -> Option<MatchResult> {
         // iterate over all matching fields:
         let item_text = item.text();
         let item_len = item_text.len();

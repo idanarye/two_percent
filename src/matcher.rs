@@ -38,22 +38,22 @@ pub static THREAD_POOL: LazyLock<Arc<ThreadPool>> = LazyLock::new(|| {
 });
 
 //==============================================================================
-pub struct MatcherControl {
+pub struct MatcherControl<T: SkimItem> {
     stopped: Arc<AtomicBool>,
     processed: Arc<AtomicUsize>,
     matched: Arc<AtomicUsize>,
-    items: Arc<SpinLock<Vec<MatchedItem>>>,
+    items: Arc<SpinLock<Vec<MatchedItem<T>>>>,
     opt_thread_handle: Option<JoinHandle<()>>,
 }
 
-impl Drop for MatcherControl {
+impl<T: SkimItem> Drop for MatcherControl<T> {
     fn drop(&mut self) {
         self.kill();
         drop(self.take());
     }
 }
 
-impl MatcherControl {
+impl<T: SkimItem> MatcherControl<T> {
     pub fn get_num_processed(&self) -> usize {
         self.processed.load(Ordering::Relaxed)
     }
@@ -75,7 +75,7 @@ impl MatcherControl {
         malloc_trim()
     }
 
-    pub fn take(&mut self) -> Vec<MatchedItem> {
+    pub fn take(&mut self) -> Vec<MatchedItem<T>> {
         let mut items = self.items.lock();
         std::mem::take(&mut *items)
     }
@@ -85,7 +85,7 @@ impl MatcherControl {
     }
 
     #[allow(clippy::wrong_self_convention)]
-    pub fn into_items(&mut self) -> Vec<MatchedItem> {
+    pub fn into_items(&mut self) -> Vec<MatchedItem<T>> {
         while !self.stopped.load(Ordering::Relaxed) {}
         let mut locked = self.items.lock();
 
@@ -94,13 +94,13 @@ impl MatcherControl {
 }
 
 //==============================================================================
-pub struct Matcher {
-    engine_factory: Rc<dyn MatchEngineFactory>,
+pub struct Matcher<T: SkimItem> {
+    engine_factory: Rc<dyn MatchEngineFactory<T>>,
     case_matching: CaseMatching,
 }
 
-impl Matcher {
-    pub fn builder(engine_factory: Rc<dyn MatchEngineFactory>) -> Self {
+impl<T: SkimItem> Matcher<T> {
+    pub fn builder(engine_factory: Rc<dyn MatchEngineFactory<T>>) -> Self {
         Self {
             engine_factory,
             case_matching: CaseMatching::default(),
@@ -124,10 +124,10 @@ impl Matcher {
         &self,
         query: &str,
         disabled: bool,
-        item_pool_weak: Weak<ItemPool>,
+        item_pool_weak: Weak<ItemPool<T>>,
         tx_heartbeat: Sender<(Key, Event)>,
-        matched_items: Vec<MatchedItem>,
-    ) -> MatcherControl {
+        matched_items: Vec<MatchedItem<T>>,
+    ) -> MatcherControl<T> {
         let matcher_engine = self.engine_factory.create_engine_with_case(query, self.case_matching);
         debug!("engine: {}", matcher_engine);
         let stopped = Arc::new(AtomicBool::new(false));
@@ -210,9 +210,9 @@ impl Matcher {
         index: usize,
         num_taken: usize,
         matched: &AtomicUsize,
-        matcher_engine: &dyn MatchEngine,
-        item: &Arc<dyn SkimItem>,
-    ) -> Option<MatchedItem> {
+        matcher_engine: &dyn MatchEngine<T>,
+        item: &Arc<T>,
+    ) -> Option<MatchedItem<T>> {
         matcher_engine.match_item(item.as_ref()).map(|match_result| {
             matched.fetch_add(1, Ordering::Relaxed);
 

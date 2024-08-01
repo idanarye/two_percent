@@ -4,16 +4,16 @@ use crate::{MatchEngine, MatchRange, MatchResult, SkimItem};
 
 //------------------------------------------------------------------------------
 // OrEngine, a combinator
-pub struct OrEngine {
-    engines: Vec<Box<dyn MatchEngine>>,
+pub struct OrEngine<T: SkimItem> {
+    engines: Vec<Box<dyn MatchEngine<T>>>,
 }
 
-impl OrEngine {
+impl<T: SkimItem> OrEngine<T> {
     pub fn builder() -> Self {
         Self { engines: vec![] }
     }
 
-    pub fn engines(mut self, mut engines: Vec<Box<dyn MatchEngine>>) -> Self {
+    pub fn engines(mut self, mut engines: Vec<Box<dyn MatchEngine<T>>>) -> Self {
         self.engines.append(&mut engines);
         self
     }
@@ -23,13 +23,13 @@ impl OrEngine {
     }
 }
 
-impl MatchEngine for OrEngine {
-    fn match_item(&self, item: &dyn SkimItem) -> Option<MatchResult> {
+impl<T: SkimItem> MatchEngine<T> for OrEngine<T> {
+    fn match_item(&self, item: &T) -> Option<MatchResult> {
         self.engines.iter().find_map(|engine| engine.match_item(item))
     }
 }
 
-impl Display for OrEngine {
+impl<T: SkimItem> Display for OrEngine<T> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(
             f,
@@ -45,16 +45,16 @@ impl Display for OrEngine {
 
 //------------------------------------------------------------------------------
 // AndEngine, a combinator
-pub struct AndEngine {
-    engines: Vec<Box<dyn MatchEngine>>,
+pub struct AndEngine<T: SkimItem> {
+    engines: Vec<Box<dyn MatchEngine<T>>>,
 }
 
-impl AndEngine {
+impl<T: SkimItem> AndEngine<T> {
     pub fn builder() -> Self {
         Self { engines: vec![] }
     }
 
-    pub fn engines(mut self, mut engines: Vec<Box<dyn MatchEngine>>) -> Self {
+    pub fn engines(mut self, mut engines: Vec<Box<dyn MatchEngine<T>>>) -> Self {
         self.engines.append(&mut engines);
         self
     }
@@ -86,8 +86,8 @@ impl AndEngine {
     }
 }
 
-impl MatchEngine for AndEngine {
-    fn match_item(&self, item: &dyn SkimItem) -> Option<MatchResult> {
+impl<T: SkimItem> MatchEngine<T> for AndEngine<T> {
+    fn match_item(&self, item: &T) -> Option<MatchResult> {
         // mock
         let mut results = vec![];
         for engine in &self.engines {
@@ -103,7 +103,7 @@ impl MatchEngine for AndEngine {
     }
 }
 
-impl Display for AndEngine {
+impl<T: SkimItem> Display for AndEngine<T> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(
             f,

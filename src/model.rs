@@ -49,10 +49,10 @@ static RE_PREVIEW_OFFSET: LazyLock<Regex> =
 static DEFAULT_CRITERION: LazyLock<Vec<RankCriteria>> =
     LazyLock::new(|| vec![RankCriteria::Score, RankCriteria::Begin, RankCriteria::End]);
 
-pub struct Model {
-    reader: Reader,
+pub struct Model<T: SkimItem> {
+    reader: Reader<T>,
     query: Query,
-    selection: Selection,
+    selection: Selection<T>,
     num_options: usize,
     select1: bool,
     exit0: bool,
@@ -61,25 +61,25 @@ pub struct Model {
     exact_mode: bool,
 
     use_regex: bool,
-    regex_matcher: Matcher,
-    matcher: Matcher,
+    regex_matcher: Matcher<T>,
+    matcher: Matcher<T>,
 
     term: Arc<Term>,
 
-    item_pool: Arc<ItemPool>,
+    item_pool: Arc<ItemPool<T>>,
 
     rx: EventReceiver,
     tx: EventSender,
 
     reader_timer: Instant,
     matcher_timer: Instant,
-    reader_control: Option<ReaderControl>,
-    matcher_control: Option<MatcherControl>,
+    reader_control: Option<ReaderControl<T>>,
+    matcher_control: Option<MatcherControl<T>>,
 
-    header: Header,
+    header: Header<T>,
 
     preview_hidden: bool,
-    previewer: Option<Previewer>,
+    previewer: Option<Previewer<T>>,
     preview_direction: Direction,
     preview_size: Size,
 
@@ -98,7 +98,7 @@ pub struct Model {
     rank_builder: Arc<RankBuilder>,
 }
 
-impl Drop for Model {
+impl<T: SkimItem> Drop for Model<T> {
     fn drop(&mut self) {
         let m_ctrl = self.matcher_control.take();
         let r_ctrl = self.reader_control.take();
@@ -120,8 +120,8 @@ impl Drop for Model {
     }
 }
 
-impl Model {
-    pub fn new(rx: EventReceiver, tx: EventSender, reader: Reader, term: Arc<Term>, options: &SkimOptions) -> Self {
+impl<T: SkimItem> Model<T> {
+    pub fn new(rx: EventReceiver, tx: EventSender, reader: Reader<T>, term: Arc<Term>, options: &SkimOptions<T>) -> Self {
         let default_command = match env::var("SKIM_DEFAULT_COMMAND").as_ref().map(String::as_ref) {
             Ok("") | Err(_) => "find .".to_owned(),
             Ok(val) => val.to_owned(),
@@ -222,7 +222,7 @@ impl Model {
         ret
     }
 
-    fn parse_options(&mut self, options: &SkimOptions) {
+    fn parse_options(&mut self, options: &SkimOptions<T>) {
         if let Some(delimiter) = options.delimiter {
             self.delimiter = Regex::new(delimiter).unwrap_or_else(|_| Regex::new(DELIMITER_STR).unwrap());
         }
@@ -520,7 +520,7 @@ impl Model {
         self.act_heart_beat(env);
     }
 
-    pub fn start(&mut self) -> Option<SkimOutput> {
+    pub fn start(&mut self) -> Option<SkimOutput<T>> {
         let mut env = ModelEnv {
             cmd: self.query.get_cmd(),
             query: self.query.get_fz_query(),

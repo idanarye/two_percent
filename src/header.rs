@@ -6,23 +6,23 @@ use crate::item::ItemPool;
 use crate::theme::ColorTheme;
 use crate::theme::DEFAULT_THEME;
 use crate::util::{clear_canvas, print_item, str_lines, LinePrinter};
-use crate::{DisplayContext, SkimOptions};
+use crate::{DisplayContext, SkimItem, SkimOptions};
 
 use std::cmp::max;
 use std::sync::{Arc, Weak};
 use tuikit::prelude::*;
 
-pub struct Header {
+pub struct Header<T: SkimItem> {
     header: Vec<AnsiString>,
     tabstop: usize,
     reverse: bool,
     theme: Arc<ColorTheme>,
 
     // for reserved header items
-    item_pool: Weak<ItemPool>,
+    item_pool: Weak<ItemPool<T>>,
 }
 
-impl Header {
+impl<T: SkimItem> Header<T> {
     pub fn empty() -> Self {
         Self {
             header: vec![],
@@ -33,11 +33,11 @@ impl Header {
         }
     }
 
-    pub fn upgrade_pool(&self) -> Arc<ItemPool> {
+    pub fn upgrade_pool(&self) -> Arc<ItemPool<T>> {
         Weak::upgrade(&self.item_pool).unwrap_or_default()
     }
 
-    pub fn item_pool(mut self, item_pool: &Arc<ItemPool>) -> Self {
+    pub fn item_pool(mut self, item_pool: &Arc<ItemPool<T>>) -> Self {
         self.item_pool = Arc::downgrade(&item_pool);
         self
     }
@@ -47,7 +47,7 @@ impl Header {
         self
     }
 
-    pub fn with_options(mut self, options: &SkimOptions) -> Self {
+    pub fn with_options(mut self, options: &SkimOptions<T>) -> Self {
         if let Some(tabstop_str) = options.tabstop {
             let tabstop = tabstop_str.parse::<usize>().unwrap_or(8);
             self.tabstop = max(1, tabstop);
@@ -83,7 +83,7 @@ impl Header {
     }
 }
 
-impl Draw for Header {
+impl<T: SkimItem> Draw for Header<T> {
     fn draw(&self, canvas: &mut dyn Canvas) -> DrawResult<()> {
         let (screen_width, screen_height) = canvas.size()?;
         if screen_width < 3 {
@@ -146,13 +146,13 @@ impl Draw for Header {
     }
 }
 
-impl Widget<Event> for Header {
+impl<T: SkimItem> Widget<Event> for Header<T> {
     fn size_hint(&self) -> (Option<usize>, Option<usize>) {
         (None, Some(self.lines_of_header()))
     }
 }
 
-impl EventHandler for Header {
+impl<T: SkimItem> EventHandler for Header<T> {
     fn handle(&mut self, _event: &Event) -> UpdateScreen {
         UpdateScreen::DONT_REDRAW
     }

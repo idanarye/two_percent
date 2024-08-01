@@ -19,7 +19,7 @@ use crate::malloc_trim;
 
 const ITEMS_INITIAL_CAPACITY: usize = 65536;
 
-pub trait CommandCollector {
+pub trait CommandCollector<T: SkimItem> {
     /// execute the `cmd` and produce a
     /// - skim item producer
     /// - a channel sender, any message send would mean to terminate the `cmd` process (for now).
@@ -31,26 +31,26 @@ pub trait CommandCollector {
         &mut self,
         cmd: &str,
         components_to_stop: Arc<AtomicUsize>,
-    ) -> (SkimItemReceiver, Sender<i32>, Option<JoinHandle<()>>);
+    ) -> (SkimItemReceiver<T>, Sender<i32>, Option<JoinHandle<()>>);
 }
 
-pub struct ReaderControl {
+pub struct ReaderControl<T: SkimItem> {
     tx_interrupt: Sender<i32>,
     tx_interrupt_cmd: Option<Sender<i32>>,
     components_to_stop: Arc<AtomicUsize>,
-    items: Arc<RwLock<Vec<Arc<dyn SkimItem>>>>,
+    items: Arc<RwLock<Vec<Arc<T>>>>,
     thread_reader: Option<JoinHandle<()>>,
     thread_ingest: Option<JoinHandle<()>>,
 }
 
-impl Drop for ReaderControl {
+impl<T: SkimItem> Drop for ReaderControl<T> {
     fn drop(&mut self) {
         self.kill();
         drop(self.take());
     }
 }
 
-impl ReaderControl {
+impl<T: SkimItem> ReaderControl<T> {
     pub fn kill(&mut self) {
         debug!(
             "kill reader, components before: {}",
@@ -102,25 +102,25 @@ impl ReaderControl {
     }
 }
 
-pub struct Reader {
-    cmd_collector: Rc<RefCell<dyn CommandCollector>>,
-    rx_item: Option<SkimItemReceiver>,
+pub struct Reader<T: SkimItem> {
+    cmd_collector: Rc<RefCell<dyn CommandCollector<T>>>,
+    rx_item: Option<SkimItemReceiver<T>>,
 }
 
-impl Reader {
-    pub fn with_options(options: &SkimOptions) -> Self {
+impl<T: SkimItem> Reader<T> {
+    pub fn with_options(options: &SkimOptions<T>) -> Self {
         Self {
             cmd_collector: options.cmd_collector.clone(),
             rx_item: None,
         }
     }
 
-    pub fn source(mut self, rx_item: Option<SkimItemReceiver>) -> Self {
+    pub fn source(mut self, rx_item: Option<SkimItemReceiver<T>>) -> Self {
         self.rx_item = rx_item;
         self
     }
 
-    pub fn run(&mut self, cmd: &str) -> ReaderControl {
+    pub fn run(&mut self, cmd: &str) -> ReaderControl<T> {
         mark_new_run(cmd);
 
         let components_to_stop: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(0));
@@ -149,10 +149,10 @@ impl Reader {
     }
 }
 
-fn collect_item(
+fn collect_item<T: SkimItem>(
     components_to_stop: Arc<AtomicUsize>,
-    rx_item: SkimItemReceiver,
-    items_weak: Weak<RwLock<Vec<Arc<dyn SkimItem>>>>,
+    rx_item: SkimItemReceiver<T>,
+    items_weak: Weak<RwLock<Vec<Arc<T>>>>,
 ) -> (Sender<i32>, JoinHandle<()>) {
     let (tx_interrupt, rx_interrupt) = unbounded();
 
